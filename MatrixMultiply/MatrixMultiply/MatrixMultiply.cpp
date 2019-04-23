@@ -31,28 +31,28 @@ int main( int argc, char ** argv )
             "Lower bound on the random number generator.",
             false,
             -50.0,
-            "real" );
+            "lower bound" );
 
         TCLAP::ValueArg<double> upper( "u",
             "upper",
             "Upper bound on the random number generator.",
             false,
             50.0,
-            "real" );
+            "upper bound" );
 
         TCLAP::ValueArg<size_t> precision( "p",
             "precision",
             "Number of digits to display for each matrix entry.",
             false,
             6,
-            "integer" );
+            "number digits" );
 
         TCLAP::ValueArg<size_t> seed( "s",
             "seed",
             "Seed to use for random number generation.",
             false,
             1,
-            "integer" );
+            "RNG seed" );
 
         TCLAP::UnlabeledValueArg<size_t> matrix_size( "matrix_size",
             "Specifies the size of the N-by-N matrix to compute.",
@@ -60,10 +60,10 @@ int main( int argc, char ** argv )
             2, // default value
             "matrix size" );
 
-        cmd.add( lower );
         cmd.add( upper );
-        cmd.add( precision );
         cmd.add( seed );
+        cmd.add( precision );
+        cmd.add( lower );
         cmd.add( matrix_size );
         cmd.parse( argc, argv );
 

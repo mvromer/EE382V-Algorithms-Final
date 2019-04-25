@@ -16,6 +16,8 @@ std::unique_ptr<double[]> make_matrix( size_t N, TGenerator & next_random );
 
 void print_matrix( double * M, size_t N, const std::string & name );
 
+double zero_gen();
+
 // Matrix multiply: Dot Product (ijk variant)
 void multiply_dp( double * A, double * B, double * C, size_t N )
 {
@@ -131,9 +133,8 @@ int main( int argc, char ** argv )
         // Create matrices.
         auto A = make_matrix( matrix_size.getValue(), next_random );
         auto B = make_matrix( matrix_size.getValue(), next_random );
-        auto C = make_matrix( matrix_size.getValue(), next_random );
+        auto C = make_matrix( matrix_size.getValue(), zero_gen );
 
-        
         // Print results.
         print_matrix( C.get(), matrix_size.getValue(), "ori C" );
 
@@ -161,23 +162,23 @@ int main( int argc, char ** argv )
 
 // Utility functions.
 template<typename TGenerator>
-void init_array( double * M, size_t N, TGenerator & next_random )
+void init_array( double * M, size_t N, TGenerator & num_gen )
 {
 
     for( size_t col = 0; col < N; ++col )
     {
         for( size_t row = 0; row < N; ++row )
         {
-            M[row + col * N] = next_random();
+            M[row + col * N] = num_gen();
         }
     }
 }
 
 template<typename TGenerator>
-std::unique_ptr<double[]> make_matrix( size_t N, TGenerator & next_random )
+std::unique_ptr<double[]> make_matrix( size_t N, TGenerator & num_gen )
 {
     auto M = std::make_unique<double[]>( N * N );
-    init_array( M.get(), N, next_random );
+    init_array( M.get(), N, num_gen );
     return M;
 }
 
@@ -201,4 +202,9 @@ void print_matrix( double * M, size_t N, const std::string & name )
     }
 
     std::cout << "]" << std::endl;
+}
+
+double zero_gen()
+{
+    return 0;
 }

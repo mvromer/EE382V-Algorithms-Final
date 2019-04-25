@@ -4,6 +4,8 @@
 #include <memory>
 #include <random>
 #include <tclap/CmdLine.h>
+#include <algorithm>
+#include <iterator>
 
 // Forward declarations.
 template<typename TGenerator>
@@ -14,9 +16,51 @@ std::unique_ptr<double[]> make_matrix( size_t N, TGenerator & next_random );
 
 void print_matrix( double * M, size_t N, const std::string & name );
 
-// Matrix multiply algorithms.
-void multiply_demo( double * A, double * B, double * C, size_t N )
+double zero_gen();
+
+// Matrix multiply: Dot Product (ijk variant)
+void multiply_dp( double * A, double * B, double * C, size_t N )
 {
+    for ( size_t row = 0; row < N; ++row )
+    {
+        for ( size_t col = 0; col < N; ++col )
+        {
+            for (size_t dataIndex = 0; dataIndex < N; ++dataIndex)
+            {
+                C[row + col * N] = A[row + dataIndex * N] * B[dataIndex + col * N] + C[row + col * N];
+            }
+        }
+    }
+}
+
+// Matrix multiply: Saxpy (ikj variant)
+void multiply_sp( double * A, double * B, double * C, size_t N )
+{
+    for ( size_t row = 0; row < N; ++row )
+    {
+        for (size_t dataIndex = 0; dataIndex < N; ++dataIndex)
+        {
+            for ( size_t col = 0; col < N; ++col )
+            {
+                C[row + col * N] = A[row + dataIndex * N] * B[dataIndex + col * N] + C[row + col * N];
+            }
+        }
+    }
+}
+
+// Matrix multiply: outer Product (kij)
+void multiply_op( double * A, double * B, double * C, size_t N )
+{
+    for (size_t dataIndex = 0; dataIndex < N; ++dataIndex)
+    {
+        for ( size_t row = 0; row < N; ++row )
+        {
+            for ( size_t col = 0; col < N; ++col )
+            {
+                C[row + col * N] = A[row + dataIndex * N] * B[dataIndex + col * N] + C[row + col * N];
+            }
+        }
+    }
 }
 
 int main( int argc, char ** argv )
@@ -89,10 +133,13 @@ int main( int argc, char ** argv )
         // Create matrices.
         auto A = make_matrix( matrix_size.getValue(), next_random );
         auto B = make_matrix( matrix_size.getValue(), next_random );
-        auto C = make_matrix( matrix_size.getValue(), next_random );
+        auto C = make_matrix( matrix_size.getValue(), zero_gen );
+
+        // Print results.
+        print_matrix( C.get(), matrix_size.getValue(), "ori C" );
 
         // Run matrix multiply.
-        multiply_demo( A.get(), B.get(), C.get(), matrix_size.getValue() );
+        multiply_op( A.get(), B.get(), C.get(), matrix_size.getValue() );
 
         // Print results.
         print_matrix( A.get(), matrix_size.getValue(), "A" );
@@ -115,23 +162,23 @@ int main( int argc, char ** argv )
 
 // Utility functions.
 template<typename TGenerator>
-void init_array( double * M, size_t N, TGenerator & next_random )
+void init_array( double * M, size_t N, TGenerator & num_gen )
 {
 
     for( size_t col = 0; col < N; ++col )
     {
         for( size_t row = 0; row < N; ++row )
         {
-            M[row + col * N] = next_random();
+            M[row + col * N] = num_gen();
         }
     }
 }
 
 template<typename TGenerator>
-std::unique_ptr<double[]> make_matrix( size_t N, TGenerator & next_random )
+std::unique_ptr<double[]> make_matrix( size_t N, TGenerator & num_gen )
 {
     auto M = std::make_unique<double[]>( N * N );
-    init_array( M.get(), N, next_random );
+    init_array( M.get(), N, num_gen );
     return M;
 }
 
@@ -139,11 +186,11 @@ void print_matrix( double * M, size_t N, const std::string & name )
 {
     std::cout << name << " = [" << std::endl;
 
-    for( size_t col = 0; col < N; ++col )
+    for( size_t row = 0; row < N; ++row )
     {
         std::cout << "  ";
 
-        for( size_t row = 0; row < N; ++row )
+        for( size_t col = 0; col < N; ++col )
         {
             std::cout << M[row + col * N];
 
@@ -155,4 +202,9 @@ void print_matrix( double * M, size_t N, const std::string & name )
     }
 
     std::cout << "]" << std::endl;
+}
+
+double zero_gen()
+{
+    return 0;
 }

@@ -50,8 +50,15 @@ int main( int argc, char ** argv )
             "Use integer entries instead of real entries.",
             false );
 
+        TCLAP::ValueArg<size_t> cutoff( "c",
+            "cutoff",
+            "Power of 2 cutoff value used by Strassen multiplication.",
+            false,
+            2,
+            "cutoff" );
+
         TCLAP::UnlabeledValueArg<size_t> matrix_size( "matrix_size",
-            "Specifies the size of the N-by-N matrix to compute.",
+            "Specifies the size of the N-by-N matrix to compute. Must be power of 2.",
             true, // required
             2, // default value
             "matrix size" );
@@ -61,6 +68,7 @@ int main( int argc, char ** argv )
         cmd.add( precision );
         cmd.add( lower );
         cmd.add( integer_entries );
+        cmd.add( cutoff );
         cmd.add( matrix_size );
         cmd.parse( argc, argv );
 
@@ -104,8 +112,8 @@ int main( int argc, char ** argv )
         }
 
         // Run matrix multiply.
-        multiply_op( A.get(), B.get(), C.get(), matrix_size.getValue() );
-        //strass_serial( A.get(), B.get(), C.get(), matrix_size.getValue(), 2 );
+        //multiply_op( A.get(), B.get(), C.get(), matrix_size.getValue() );
+        strass_serial( A.get(), B.get(), C.get(), matrix_size.getValue(), cutoff.getValue() );
 
         // Configure output precision.
         std::cout.precision( precision.getValue() );

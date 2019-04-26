@@ -154,6 +154,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="MatrixMultiply.cpp" />
+    <ClCompile Include="Serial.cpp" />
     <ClCompile Include="Strass.cpp" />
     <ClCompile Include="Utility.cpp" />
   </ItemGroup>

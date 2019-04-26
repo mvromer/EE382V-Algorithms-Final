@@ -1,14 +1,21 @@
+#include <algorithm>
 #include <functional>
 #include <ios>
 #include <iostream>
+#include <iterator>
 #include <memory>
 #include <random>
+#include <stdexcept>
 #include <tclap/CmdLine.h>
-#include <algorithm>
-#include <iterator>
 
 #include "Utility.h"
 #include "MatrixMultiply.h"
+
+// From: https://www.exploringbinary.com/ten-ways-to-check-if-an-integer-is-a-power-of-two-in-c/
+bool is_power_of_two( size_t x )
+{
+    return ((x != 0) && ((x & (~x + 1)) == x));
+}
 
 int main( int argc, char ** argv )
 {
@@ -72,11 +79,17 @@ int main( int argc, char ** argv )
         cmd.add( matrix_size );
         cmd.parse( argc, argv );
 
-        // Allocate matrices.
+        // Extract command line values.
         const size_t N = matrix_size.getValue();
-        const double lowerBound = lower.getValue();
-        const double upperBound = upper.getValue();
+        const size_t strassen_cutoff = cutoff.getValue();
+        const double lower_bound = lower.getValue();
+        const double upper_bound = upper.getValue();
 
+        // Make sure size and cutoff values are powers of two.
+        if( !(is_power_of_two( N ) && is_power_of_two( strassen_cutoff )) )
+            throw std::invalid_argument( "Size and cutoff (if given) must be powers of 2." );
+
+        // Allocate matrices.
         auto A = make_matrix( N );
         auto B = make_matrix( N );
         auto C = make_matrix( N );
@@ -97,31 +110,31 @@ int main( int argc, char ** argv )
 
         if( integer_entries.getValue() )
         {
-            std::uniform_int_distribution<int> random_distribution( static_cast<int>(lowerBound),
-                static_cast<int>(upperBound) );
+            std::uniform_int_distribution<int> random_distribution( static_cast<int>(lower_bound),
+                static_cast<int>(upper_bound) );
             auto next_random = std::bind( random_distribution, random_engine );
             init_matrix( A.get(), N, next_random );
             init_matrix( B.get(), N, next_random );
         }
         else
         {
-            std::uniform_real_distribution<double> random_distribution( lowerBound, upperBound );
+            std::uniform_real_distribution<double> random_distribution( lower_bound, upper_bound );
             auto next_random = std::bind( random_distribution, random_engine );
             init_matrix( A.get(), N, next_random );
             init_matrix( B.get(), N, next_random );
         }
 
         // Run matrix multiply.
-        //multiply_op( A.get(), B.get(), C.get(), matrix_size.getValue() );
-        strass_serial( A.get(), B.get(), C.get(), matrix_size.getValue(), cutoff.getValue() );
+        //multiply_op( A.get(), B.get(), C.get(), N );
+        strass_serial( A.get(), B.get(), C.get(), N, strassen_cutoff );
 
         // Configure output precision.
         std::cout.precision( precision.getValue() );
 
         // Print results.
-        print_matrix( A.get(), matrix_size.getValue(), "A" );
-        print_matrix( B.get(), matrix_size.getValue(), "B" );
-        print_matrix( C.get(), matrix_size.getValue(), "C" );
+        print_matrix( A.get(), N, "A" );
+        print_matrix( B.get(), N, "B" );
+        print_matrix( C.get(), N, "C" );
 
         return 0;
     }

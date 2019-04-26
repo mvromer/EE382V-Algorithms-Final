@@ -18,5 +18,24 @@
     <ClCompile Include="MatrixMultiply.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Strass.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Utility.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Utility.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MatrixMultiply.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Utility.inl">
+      <Filter>Source Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

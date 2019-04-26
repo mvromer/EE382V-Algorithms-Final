@@ -7,16 +7,8 @@
 #include <algorithm>
 #include <iterator>
 
-// Forward declarations.
-template<typename TGenerator>
-void init_array( double * M, size_t N, TGenerator & next_random );
-
-template<typename TGenerator>
-std::unique_ptr<double[]> make_matrix( size_t N, TGenerator & next_random );
-
-void print_matrix( double * M, size_t N, const std::string & name );
-
-double zero_gen();
+#include "Utility.h"
+#include "MatrixMultiply.h"
 
 // Matrix multiply: Dot Product (ijk variant)
 void multiply_dp( double * A, double * B, double * C, size_t N )
@@ -98,6 +90,11 @@ int main( int argc, char ** argv )
             1,
             "RNG seed" );
 
+        TCLAP::SwitchArg integer_entries( "i",
+            "int",
+            "Use integer entries instead of real entries.",
+            false );
+
         TCLAP::UnlabeledValueArg<size_t> matrix_size( "matrix_size",
             "Specifies the size of the N-by-N matrix to compute.",
             true, // required
@@ -108,15 +105,23 @@ int main( int argc, char ** argv )
         cmd.add( seed );
         cmd.add( precision );
         cmd.add( lower );
+        cmd.add( integer_entries );
         cmd.add( matrix_size );
         cmd.parse( argc, argv );
 
-        // Configure output precision.
-        std::cout.precision( precision.getValue() );
+        // Allocate matrices.
+        const size_t N = matrix_size.getValue();
+        const double lowerBound = lower.getValue();
+        const double upperBound = upper.getValue();
 
-        // Setup random number generator.
+        auto A = make_matrix( N );
+        auto B = make_matrix( N );
+        auto C = make_matrix( N );
+
+        // Initialize matrices.
+        init_matrix( C.get(), N, zero_gen );
+
         std::default_random_engine random_engine;
-
         if( seed.isSet() )
         {
             random_engine.seed( seed.getValue() );
@@ -127,19 +132,29 @@ int main( int argc, char ** argv )
             random_engine.seed( rd() );
         }
 
-        std::uniform_real_distribution<double> random_distribution( lower.getValue(), upper.getValue() );
-        auto next_random = std::bind( random_distribution, random_engine );
-
-        // Create matrices.
-        auto A = make_matrix( matrix_size.getValue(), next_random );
-        auto B = make_matrix( matrix_size.getValue(), next_random );
-        auto C = make_matrix( matrix_size.getValue(), zero_gen );
-
-        // Print results.
-        print_matrix( C.get(), matrix_size.getValue(), "ori C" );
+        if( integer_entries.getValue() )
+        {
+            std::uniform_int_distribution<int> random_distribution( static_cast<int>(lowerBound),
+                static_cast<int>(upperBound) );
+            auto next_random = std::bind( random_distribution, random_engine );
+            init_matrix( A.get(), N, next_random );
+            init_matrix( B.get(), N, next_random );
+        }
+        else
+        {
+            std::uniform_real_distribution<double> random_distribution( lowerBound, upperBound );
+            auto next_random = std::bind( random_distribution, random_engine );
+            init_matrix( A.get(), N, next_random );
+            init_matrix( B.get(), N, next_random );
+        }
 
         // Run matrix multiply.
         multiply_op( A.get(), B.get(), C.get(), matrix_size.getValue() );
+
+        strass_serial( A.get(), B.get(), C.get(), matrix_size.getValue(), 2 );
+
+        // Configure output precision.
+        std::cout.precision( precision.getValue() );
 
         // Print results.
         print_matrix( A.get(), matrix_size.getValue(), "A" );
@@ -158,53 +173,4 @@ int main( int argc, char ** argv )
     }
 
     return 1;
-}
-
-// Utility functions.
-template<typename TGenerator>
-void init_array( double * M, size_t N, TGenerator & num_gen )
-{
-
-    for( size_t col = 0; col < N; ++col )
-    {
-        for( size_t row = 0; row < N; ++row )
-        {
-            M[row + col * N] = num_gen();
-        }
-    }
-}
-
-template<typename TGenerator>
-std::unique_ptr<double[]> make_matrix( size_t N, TGenerator & num_gen )
-{
-    auto M = std::make_unique<double[]>( N * N );
-    init_array( M.get(), N, num_gen );
-    return M;
-}
-
-void print_matrix( double * M, size_t N, const std::string & name )
-{
-    std::cout << name << " = [" << std::endl;
-
-    for( size_t row = 0; row < N; ++row )
-    {
-        std::cout << "  ";
-
-        for( size_t col = 0; col < N; ++col )
-        {
-            std::cout << M[row + col * N];
-
-            if( col != N - 1 || row != N - 1 )
-                std::cout << ", ";
-        }
-
-        std::cout << std::endl;
-    }
-
-    std::cout << "]" << std::endl;
-}
-
-double zero_gen()
-{
-    return 0;
 }

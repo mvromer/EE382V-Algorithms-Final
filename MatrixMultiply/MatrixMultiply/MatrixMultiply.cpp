@@ -8,6 +8,7 @@
 #include <stdexcept>
 #include <tclap/CmdLine.h>
 
+#include "GpuUtility.h"
 #include "Utility.h"
 #include "MatrixMultiply.h"
 
@@ -148,4 +149,4 @@ int main( int argc, char ** argv )
     }
 
     return 1;
-}
+    }

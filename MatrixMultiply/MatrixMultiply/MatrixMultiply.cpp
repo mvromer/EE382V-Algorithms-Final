@@ -8,7 +8,7 @@
 #include <stdexcept>
 #include <tclap/CmdLine.h>
 
-#include "GpuUtility.h"
+//#include "GpuUtility.h"
 #include "Utility.h"
 #include "MatrixMultiply.h"
 

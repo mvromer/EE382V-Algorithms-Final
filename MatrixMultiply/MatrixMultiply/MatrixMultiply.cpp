@@ -95,6 +95,10 @@ int main( int argc, char ** argv )
         auto B = make_matrix( N );
         auto C = make_matrix( N );
 
+        //auto A = make_matrix_gpu( N );
+        //auto B = make_matrix_gpu( N );
+        //auto C = make_matrix_gpu( N );
+
         // Initialize matrices.
         init_matrix( C.get(), N, zero_gen );
 
@@ -128,6 +132,7 @@ int main( int argc, char ** argv )
         // Run matrix multiply.
         //multiply_op( A.get(), B.get(), C.get(), N );
         strass_serial( A.get(), B.get(), C.get(), N, strassen_cutoff );
+        //multiply_dp_gpu( A.get(), B.get(), C.get(), N );
 
         // Configure output precision.
         std::cout.precision( precision.getValue() );

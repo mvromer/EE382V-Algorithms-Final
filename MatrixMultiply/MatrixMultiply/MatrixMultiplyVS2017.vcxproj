@@ -163,7 +163,7 @@
     <ClInclude Include="Utility.h" />
   </ItemGroup>
   <ItemGroup>
-    <CudaCompile Include="GpuSerial.cu" />
+    <CudaCompile Include="GpuDotProduct.cu" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

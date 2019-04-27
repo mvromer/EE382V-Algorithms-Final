@@ -7,5 +7,6 @@ void multiply_op( double * A, double * B, double * C, size_t N );
 void strass_serial( double * A, double * B, double * C, size_t N, size_t cutoff );
 
 void multiply_dp_gpu( double * A, double * B, double * C, size_t N );
+void multiply_dp_gpu_shared( double * A, double * B, double * C, size_t N );
 
 #endif

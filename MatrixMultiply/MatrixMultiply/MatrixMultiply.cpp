@@ -130,9 +130,10 @@ int main( int argc, char ** argv )
         }
 
         // Run matrix multiply.
-        //multiply_op( A.get(), B.get(), C.get(), N );
-        strass_serial( A.get(), B.get(), C.get(), N, strassen_cutoff );
+        multiply_dp( A.get(), B.get(), C.get(), N );
+        //strass_serial( A.get(), B.get(), C.get(), N, strassen_cutoff );
         //multiply_dp_gpu( A.get(), B.get(), C.get(), N );
+        //multiply_dp_gpu_shared( A.get(), B.get(), C.get(), N );
 
         // Configure output precision.
         std::cout.precision( precision.getValue() );

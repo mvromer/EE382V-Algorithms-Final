@@ -25,19 +25,31 @@ int main( int argc, char ** argv )
         // Parse command line.
         TCLAP::CmdLine cmd( "EE382V Algorithms Final - Matrix Multiply" );
 
+        TCLAP::ValueArg<std::string> algorithm_arg( "a",
+            "algorithm",
+            "Matrix multiply algorithm to use.",
+            false,
+            "serial_dp",
+            "algorithm" );
+
+        TCLAP::ValueArg<size_t> cutoff( "c",
+            "cutoff",
+            "Power of 2 cutoff value used by Strassen multiplication.",
+            false,
+            2,
+            "cutoff" );
+
+        TCLAP::SwitchArg integer_entries( "i",
+            "int",
+            "Use integer entries instead of real entries.",
+            false );
+
         TCLAP::ValueArg<double> lower( "l",
             "lower",
             "Lower bound on the random number generator.",
             false,
             -50.0,
             "lower bound" );
-
-        TCLAP::ValueArg<double> upper( "u",
-            "upper",
-            "Upper bound on the random number generator.",
-            false,
-            50.0,
-            "upper bound" );
 
         TCLAP::ValueArg<size_t> precision( "p",
             "precision",
@@ -53,18 +65,6 @@ int main( int argc, char ** argv )
             1,
             "RNG seed" );
 
-        TCLAP::SwitchArg integer_entries( "i",
-            "int",
-            "Use integer entries instead of real entries.",
-            false );
-
-        TCLAP::ValueArg<size_t> cutoff( "c",
-            "cutoff",
-            "Power of 2 cutoff value used by Strassen multiplication.",
-            false,
-            2,
-            "cutoff" );
-
         TCLAP::ValueArg<size_t> trials( "t",
             "trials",
             "Number of trials to run.",
@@ -72,12 +72,17 @@ int main( int argc, char ** argv )
             3,
             "number trials" );
 
-        TCLAP::ValueArg<std::string> algorithm_arg( "a",
-            "algorithm",
-            "Matrix multiply algorithm to use.",
+        TCLAP::ValueArg<double> upper( "u",
+            "upper",
+            "Upper bound on the random number generator.",
             false,
-            "serial_dp",
-            "algorithm" );
+            50.0,
+            "upper bound" );
+
+        TCLAP::SwitchArg verbose( "v",
+            "verbose",
+            "Verbose output.",
+            false );
 
         TCLAP::UnlabeledValueArg<size_t> matrix_size( "matrix_size",
             "Specifies the size of the N-by-N matrix to compute. Must be power of 2.",
@@ -85,6 +90,7 @@ int main( int argc, char ** argv )
             2, // default value
             "matrix size" );
 
+        cmd.add( verbose );
         cmd.add( upper );
         cmd.add( trials );
         cmd.add( seed );
@@ -174,6 +180,13 @@ int main( int argc, char ** argv )
                 multiply_dp_gpu( A.get(), B.get(), C.get(), N, trial_durations[trial] );
             else if( algorithm == "gpu_dp_shared" )
                 multiply_dp_gpu_shared( A.get(), B.get(), C.get(), N, trial_durations[trial] );
+
+            if( verbose.getValue() )
+            {
+                print_matrix( A.get(), N, "A" );
+                print_matrix( B.get(), N, "B" );
+                print_matrix( C.get(), N, "C" );
+            }
         }
 
         std::stringstream timing_file_name;

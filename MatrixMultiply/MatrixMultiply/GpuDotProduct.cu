@@ -1,5 +1,7 @@
 #include <algorithm>
+#include <chrono>
 #include <cstddef>
+#include <iostream>
 #include <cuda_runtime.h>
 
 namespace
@@ -60,7 +62,7 @@ __global__ void multiply_dp_gpu_shared_kernel( double * A, double * B, double * 
 
 }
 
-void multiply_dp_gpu( double * A, double * B, double * C, size_t N )
+void multiply_dp_gpu( double * A, double * B, double * C, size_t N, double & duration )
 {
     const size_t threads_per_dim = 32;
     const size_t min_blocks_per_dim = 1;
@@ -68,11 +70,15 @@ void multiply_dp_gpu( double * A, double * B, double * C, size_t N )
 
     dim3 block_size( threads_per_dim, threads_per_dim );
     dim3 grid_size( blocks_per_dim, blocks_per_dim );
+
+    const auto start = std::chrono::steady_clock::now();
     multiply_dp_gpu_kernel<<< block_size, grid_size >>>( A, B, C, N );
     cudaDeviceSynchronize();
+    const auto end = std::chrono::steady_clock::now();
+    duration = std::chrono::duration<double>( end - start ).count();
 }
 
-void multiply_dp_gpu_shared( double * A, double * B, double * C, size_t N )
+void multiply_dp_gpu_shared( double * A, double * B, double * C, size_t N, double & duration )
 {
     const size_t threads_per_dim = 32;
     const size_t min_blocks_per_dim = 1;
@@ -80,6 +86,12 @@ void multiply_dp_gpu_shared( double * A, double * B, double * C, size_t N )
 
     dim3 block_size( threads_per_dim, threads_per_dim );
     dim3 grid_size( blocks_per_dim, blocks_per_dim );
+
+    const auto start = std::chrono::steady_clock::now();
+    //cudaGetLastError();
     multiply_dp_gpu_shared_kernel<<< block_size, grid_size >>>( A, B, C, N );
     cudaDeviceSynchronize();
+    const auto end = std::chrono::steady_clock::now();
+    duration = std::chrono::duration<double>( end - start ).count();
+    //std::cout << "Last CUDA error: " << cudaGetLastError() << std::endl;
 }

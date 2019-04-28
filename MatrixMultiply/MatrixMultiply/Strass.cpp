@@ -1,3 +1,4 @@
+#include <chrono>
 #include <vector>
 
 #include "Utility.h"
@@ -143,7 +144,7 @@ void strass_serial_helper( double * A, size_t lda, double * B, size_t ldb, doubl
 
 }
 
-void strass_serial( double * A, double * B, double * C, size_t N, size_t cutoff )
+void strass_serial( double * A, double * B, double * C, size_t N, size_t cutoff, double & duration )
 {
     WorkspaceVector workspaces;
 
@@ -156,5 +157,8 @@ void strass_serial( double * A, double * B, double * C, size_t N, size_t cutoff 
         workspace_size /= 2;
     }
 
+    const auto start = std::chrono::steady_clock::now();
     strass_serial_helper( A, N, B, N, C, N, N, cutoff, workspaces, 0, N / 2 );
+    const auto end = std::chrono::steady_clock::now();
+    duration = std::chrono::duration<double>( end - start ).count();
 }

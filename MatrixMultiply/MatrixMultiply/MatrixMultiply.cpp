@@ -1,14 +1,14 @@
-#include <algorithm>
+#include <cstdio>
 #include <functional>
-#include <ios>
 #include <iostream>
-#include <iterator>
 #include <memory>
 #include <random>
+#include <sstream>
 #include <stdexcept>
+#include <vector>
 #include <tclap/CmdLine.h>
 
-//#include "GpuUtility.h"
+#include "GpuUtility.h"
 #include "Utility.h"
 #include "MatrixMultiply.h"
 
@@ -65,6 +65,20 @@ int main( int argc, char ** argv )
             2,
             "cutoff" );
 
+        TCLAP::ValueArg<size_t> trials( "t",
+            "trials",
+            "Number of trials to run.",
+            false,
+            3,
+            "number trials" );
+
+        TCLAP::ValueArg<std::string> algorithm_arg( "a",
+            "algorithm",
+            "Matrix multiply algorithm to use.",
+            false,
+            "serial_dp",
+            "algorithm" );
+
         TCLAP::UnlabeledValueArg<size_t> matrix_size( "matrix_size",
             "Specifies the size of the N-by-N matrix to compute. Must be power of 2.",
             true, // required
@@ -72,11 +86,13 @@ int main( int argc, char ** argv )
             "matrix size" );
 
         cmd.add( upper );
+        cmd.add( trials );
         cmd.add( seed );
         cmd.add( precision );
         cmd.add( lower );
         cmd.add( integer_entries );
         cmd.add( cutoff );
+        cmd.add( algorithm_arg );
         cmd.add( matrix_size );
         cmd.parse( argc, argv );
 
@@ -85,63 +101,98 @@ int main( int argc, char ** argv )
         const size_t strassen_cutoff = cutoff.getValue();
         const double lower_bound = lower.getValue();
         const double upper_bound = upper.getValue();
+        const size_t number_trials = trials.getValue();
+        const std::string algorithm( algorithm_arg.getValue() );
+        const std::vector<std::string> valid_algorithms
+        {
+            "serial_dp",
+            "serial_sp",
+            "serial_op",
+            "strass_serial",
+            "gpu_dp",
+            "gpu_dp_shared"
+        };
 
         // Make sure size and cutoff values are powers of two.
         if( !(is_power_of_two( N ) && is_power_of_two( strassen_cutoff )) )
             throw std::invalid_argument( "Size and cutoff (if given) must be powers of 2." );
 
-        // Allocate matrices.
-        auto A = make_matrix( N );
-        auto B = make_matrix( N );
-        auto C = make_matrix( N );
+        // Make sure algorithm is valid.
+        if( std::none_of( valid_algorithms.begin(), valid_algorithms.end(),
+            [&]( const std::string & s ) { return s == algorithm; } ) )
+            throw std::invalid_argument( "Unrecognized algorithm given." );
 
-        //auto A = make_matrix_gpu( N );
-        //auto B = make_matrix_gpu( N );
-        //auto C = make_matrix_gpu( N );
+        auto trial_durations = std::make_unique<double[]>( number_trials );
 
-        // Initialize matrices.
-        init_matrix( C.get(), N, zero_gen );
-
-        std::default_random_engine random_engine;
-        if( seed.isSet() )
+        for( size_t trial = 0; trial < number_trials; ++trial )
         {
-            random_engine.seed( seed.getValue() );
+            // Allocate matrices.
+            auto A = make_matrix_gpu( N );
+            auto B = make_matrix_gpu( N );
+            auto C = make_matrix_gpu( N );
+
+            // Initialize matrices.
+            init_matrix( C.get(), N, zero_gen );
+
+            std::default_random_engine random_engine;
+            if( seed.isSet() )
+            {
+                random_engine.seed( seed.getValue() );
+            }
+            else
+            {
+                std::random_device rd;
+                random_engine.seed( rd() );
+            }
+
+            if( integer_entries.getValue() )
+            {
+                std::uniform_int_distribution<int> random_distribution( static_cast<int>(lower_bound),
+                    static_cast<int>(upper_bound) );
+                auto next_random = std::bind( random_distribution, random_engine );
+                init_matrix( A.get(), N, next_random );
+                init_matrix( B.get(), N, next_random );
+            }
+            else
+            {
+                std::uniform_real_distribution<double> random_distribution( lower_bound, upper_bound );
+                auto next_random = std::bind( random_distribution, random_engine );
+                init_matrix( A.get(), N, next_random );
+                init_matrix( B.get(), N, next_random );
+            }
+
+            // Run matrix multiply.
+            if( algorithm == "serial_dp" )
+                multiply_dp( A.get(), B.get(), C.get(), N, trial_durations[trial] );
+            else if( algorithm == "serial_sp" )
+                multiply_sp( A.get(), B.get(), C.get(), N, trial_durations[trial] );
+            else if( algorithm == "serial_op" )
+                multiply_op( A.get(), B.get(), C.get(), N, trial_durations[trial] );
+            else if( algorithm == "strass_serial" )
+                strass_serial( A.get(), B.get(), C.get(), N, strassen_cutoff, trial_durations[trial] );
+            else if( algorithm == "gpu_dp" )
+                multiply_dp_gpu( A.get(), B.get(), C.get(), N, trial_durations[trial] );
+            else if( algorithm == "gpu_dp_shared" )
+                multiply_dp_gpu_shared( A.get(), B.get(), C.get(), N, trial_durations[trial] );
         }
-        else
+
+        std::stringstream timing_file_name;
+        timing_file_name << "timing-" << N << "-" << algorithm << ".txt";
+        std::FILE * timing_file;
+        if( (timing_file = std::fopen( timing_file_name.str().c_str(), "w" )) == nullptr )
         {
-            std::random_device rd;
-            random_engine.seed( rd() );
+            std::cerr << "Failed to open timing file for writing." << std::endl;
+            return 1;
         }
 
-        if( integer_entries.getValue() )
+        fprintf( timing_file, "%zu ", N );
+        for( size_t trial = 0; trial < number_trials; ++trial )
         {
-            std::uniform_int_distribution<int> random_distribution( static_cast<int>(lower_bound),
-                static_cast<int>(upper_bound) );
-            auto next_random = std::bind( random_distribution, random_engine );
-            init_matrix( A.get(), N, next_random );
-            init_matrix( B.get(), N, next_random );
-        }
-        else
-        {
-            std::uniform_real_distribution<double> random_distribution( lower_bound, upper_bound );
-            auto next_random = std::bind( random_distribution, random_engine );
-            init_matrix( A.get(), N, next_random );
-            init_matrix( B.get(), N, next_random );
+            fprintf( timing_file, "%.15lf ", trial_durations[trial] );
         }
 
-        // Run matrix multiply.
-        multiply_dp( A.get(), B.get(), C.get(), N );
-        //strass_serial( A.get(), B.get(), C.get(), N, strassen_cutoff );
-        //multiply_dp_gpu( A.get(), B.get(), C.get(), N );
-        //multiply_dp_gpu_shared( A.get(), B.get(), C.get(), N );
-
-        // Configure output precision.
-        std::cout.precision( precision.getValue() );
-
-        // Print results.
-        print_matrix( A.get(), N, "A" );
-        print_matrix( B.get(), N, "B" );
-        print_matrix( C.get(), N, "C" );
+        fprintf( timing_file, "\n" );
+        std::fclose( timing_file );
 
         return 0;
     }
@@ -155,4 +206,4 @@ int main( int argc, char ** argv )
     }
 
     return 1;
-    }
+}
